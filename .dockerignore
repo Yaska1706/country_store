@@ -1,0 +1,11 @@
+target/
+.idea/
+.DS_Store
+.env
+.git
+.gitignore
+*.md
+docs/
+k8s.yaml
+k8s-deploy.sh
+docker-compose.yml
