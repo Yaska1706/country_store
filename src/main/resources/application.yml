@@ -40,7 +40,7 @@ app:
     initial-delay: ${VACUUM_INITIAL_DELAY:60000}
     retention: ${VACUUM_RETENTION:7d}
 
-# Upstream call policy mirrors the Go service: 3 attempts with exponential
+# Upstream call policy : 3 attempts with exponential
 # backoff (300ms base, jittered up to +50%), circuit breaker opens after
 # 3 consecutive full failures and cools down for 30s.
 resilience4j:
