@@ -82,6 +82,14 @@ docker run ... -e JAVA_OPTS="-Xms256m -Xmx256m" countriesinfo:latest
 
 ## Publishing to a registry
 
+The GitHub Actions pipeline ([../.github/workflows/ci.yml](../.github/workflows/ci.yml))
+already pushes the image to the GitHub Container Registry on every push to
+`main` — `ghcr.io/Yaska1706/country_store` with `latest` and `sha-<commit>`
+tags. Note that GHCR packages are **private by default**: make the package
+public (or configure pull credentials) before a cluster pulls it.
+
+Publishing elsewhere manually:
+
 ```sh
 docker tag countriesinfo:latest your-registry.example.com/countriesinfo:1.0.0
 docker push your-registry.example.com/countriesinfo:1.0.0

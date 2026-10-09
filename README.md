@@ -183,6 +183,20 @@ Deployment is documented separately:
 Configuration is split by platform: `.env` locally / Compose, ConfigMap +
 Secret on Kubernetes, all from the same environment-variable contract.
 
+### CI/CD
+
+GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs
+the full test suite on every push to `main` and every pull request, and
+pre-builds the Docker image:
+
+- **Pull requests** — tests + image build (no push) so regressions and
+  broken builds are caught before merge.
+- **Push to `main`** — tests, then the image is built and pushed to the
+  GitHub Container Registry as `ghcr.io/Yaska1706/country_store` with
+  `latest` and `sha-<commit>` tags.
+- Buildx's GitHub Actions cache is reused across runs, so image builds stay
+  fast.
+
 ## Architecture trade-offs and limitations
 
 | Trade-off | Consequence |
@@ -203,9 +217,9 @@ Secret on Kubernetes, all from the same environment-variable contract.
   job) so API replicas hold no state and run no duplicate work.
 - **Horizontal autoscaling** — HPA on request rate/latency once the cache
   is shared.
-- **Security** — add API keys or OIDC at the ingress.
+- **API contracts** — expose OpenAPI/Swagger and generate client SDKs.
+- **Security** — add API keys or OIDC at the ingress, and sign published
+  images (e.g. Cosign).
 - **Data layer** — read replicas for MySQL and multi-step Flyway migrations
   for safer schema evolution.
-- **CI/CD** — build/test pipeline, image signing, and automated registry
-  publication.
 - **Observability** — distributed tracing and structured log shipping.
