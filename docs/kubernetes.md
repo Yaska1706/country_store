@@ -20,7 +20,8 @@ The app reads everything from environment variables (the same contract as
 local/Compose — see the README [configuration table](../README.md#configuration)):
 
 - **ConfigMap** — `PORT`, `SYNC_INTERVAL`, `CACHE_TTL`, `VACUUM_INTERVAL`,
-  `VACUUM_RETENTION`, `DB_HOST`, `DB_PORT`, `DB_NAME`, and pool sizes.
+  `VACUUM_RETENTION`, `SPRING_PROFILES_ACTIVE` (`k8s`, JSON logs), `DB_HOST`,
+  `DB_PORT`, `DB_NAME`, and pool sizes.
 - **Secret** — `DB_USERNAME`, `DB_PASSWORD`.
 
 The manifest uses `__SERVICE_NAME__`, `__DB_HOST__`, `__DB_USERNAME__`,
@@ -77,7 +78,6 @@ REGISTRY=your-registry.io/app DB_HOST=10.0.0.5 ./k8s-deploy.sh
 
 ```sh
 kubectl -n countriesinfo get pods
-kubectl -n countriesinfo logs deployment/countriesinfo
 kubectl -n countriesinfo get svc
 
 # From inside the cluster network:
@@ -88,6 +88,26 @@ curl "localhost:8000/countries?page=1&limit=5"
 # Or through the NodePort (default 30080):
 curl localhost:30080/health
 ```
+
+## Logs
+
+With the `k8s` profile the pod writes **structured JSON to stdout**, one
+object per line. Follow and filter with `kubectl logs` + `jq`:
+
+```sh
+kubectl -n countriesinfo logs deployment/countriesinfo -f
+kubectl -n countriesinfo logs deployment/countriesinfo | jq 'select(.level == "ERROR")'
+kubectl -n countriesinfo logs deployment/countriesinfo | jq -r 'select(.requestId != null) | [.timestamp, .level, .requestId, .status] | @tsv'
+```
+
+Liveness/readiness probe hits are silent while healthy, so the log stream
+shows real traffic and failures only. The root level is controlled by
+`LOG_LEVEL` in the ConfigMap.
+
+Log retention is handled by the node's container runtime (kubelet) and its
+log rotation policy — the app writes no log files. Pod logs disappear when
+the pod is deleted; for durable, cluster-wide storage add a log aggregation
+stack (e.g. Loki) as a future improvement.
 
 > **kind on Docker Desktop** does not map NodePorts to the host by default,
 > so `localhost:30080` may refuse connections even though the pod is

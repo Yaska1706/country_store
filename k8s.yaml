@@ -14,6 +14,8 @@ data:
   CACHE_TTL: "300"
   VACUUM_INTERVAL: "3600000"
   VACUUM_RETENTION: "7d"
+  # Structured JSON logs on stdout
+  SPRING_PROFILES_ACTIVE: "k8s"
   DB_HOST: "__DB_HOST__"
   DB_PORT: "3306"
   DB_NAME: country_store

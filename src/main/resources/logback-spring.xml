@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Log formats:
+    - default profile: colorized, human-readable console output for local
+      development.
+    - docker / k8s profiles: structured JSON on stdout so log pipelines and
+      `kubectl logs` consumers can parse fields (MDC keys such as requestId
+      appear as top-level JSON fields).
+  The root level is controlled by LOG_LEVEL (default INFO) through
+  application.yml's logging.level.root.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Human-readable console output (local development) -->
+    <appender name="CONSOLE_HUMAN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd'T'HH:mm:ss.SSSXXX}} ${LOG_LEVEL_PATTERN:-%5p} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(request_id=%X{requestId:-none}){magenta} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Structured JSON output (container deployments) -->
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"countriesinfo"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <springProfile name="docker | k8s">
+        <root level="${logging.level.root:-INFO}">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!docker &amp; !k8s">
+        <root level="${logging.level.root:-INFO}">
+            <appender-ref ref="CONSOLE_HUMAN"/>
+        </root>
+    </springProfile>
+</configuration>
