@@ -1,5 +1,3 @@
-# The __DB_HOST__, __DB_USERNAME__, __DB_PASSWORD__ and __IMAGE__ placeholders
-# are rendered by ./k8s-deploy.sh (or replace them manually).
 apiVersion: v1
 kind: Namespace
 metadata:
