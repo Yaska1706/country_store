@@ -12,6 +12,7 @@ set -e
 #   DB_USERNAME=root DB_PASSWORD=secret ./k8s-deploy.sh    # custom credentials
 
 IMAGE=${IMAGE:-countriesinfo:latest}
+SERVICE_NAME=${SERVICE_NAME:-countriesinfo}
 DB_USERNAME=${DB_USERNAME:-root}
 DB_PASSWORD=${DB_PASSWORD:-development}
 REGISTRY=${REGISTRY:-}
@@ -51,6 +52,7 @@ fi
 
 render() {
   sed \
+    -e "s|__SERVICE_NAME__|$SERVICE_NAME|" \
     -e "s|__IMAGE__|$IMAGE|" \
     -e "s|__DB_HOST__|$DB_HOST|" \
     -e "s|__DB_USERNAME__|$DB_USERNAME|" \
@@ -80,5 +82,5 @@ esac
 
 render | kubectl apply -f -
 
-kubectl -n countriesinfo rollout status deployment/countriesinfo
+kubectl -n countriesinfo rollout status deployment/$SERVICE_NAME
 echo "countriesinfo deployed on $PLATFORM (image=$IMAGE, db=$DB_HOST)"
