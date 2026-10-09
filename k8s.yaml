@@ -27,6 +27,7 @@ kind: Secret
 metadata:
   name: countriesinfo-secret
   namespace: countriesinfo
+type: Opaque
 stringData:
   DB_USERNAME: "__DB_USERNAME__"
   DB_PASSWORD: "__DB_PASSWORD__"
@@ -37,9 +38,13 @@ metadata:
   name: __SERVICE_NAME__
   namespace: countriesinfo
   labels:
+    app: countriesinfo
     name: __SERVICE_NAME__
 spec:
+  replicas: 1
+  progressDeadlineSeconds: 600
   strategy:
+    type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
       maxUnavailable: 25%
@@ -49,39 +54,46 @@ spec:
   template:
     metadata:
       labels:
+        app: countriesinfo
         name: __SERVICE_NAME__
     spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: __SERVICE_NAME__
           image: "__IMAGE__"
-          # Overrides the :latest -> Always default so local clusters use
-          # the image loaded by k8s-deploy.sh instead of pulling.
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: countriesinfo-config
             - secretRef:
                 name: countriesinfo-secret
           env:
-            # Size the JVM heap against the container memory limit
-            # (512Mi limit -> ~384Mi max heap).
             - name: JAVA_OPTS
               value: "-XX:MaxRAMPercentage=75.0"
           livenessProbe:
             httpGet:
               path: /health
               port: http
+              scheme: HTTP
             initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /ready
               port: http
+              scheme: HTTP
             initialDelaySeconds: 60
+            periodSeconds: 10
             timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
