@@ -244,7 +244,6 @@ pre-builds the Docker image:
   job) so API replicas hold no state and run no duplicate work.
 - **Horizontal autoscaling** — HPA on request rate/latency once the cache
   is shared.
-- **API contracts** — expose OpenAPI/Swagger and generate client SDKs.
 - **Security** — add API keys or OIDC at the ingress, and sign published
   images (e.g. Cosign).
 - **Data layer** — read replicas for MySQL and multi-step Flyway migrations

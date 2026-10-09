@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Log formats:
-    - default profile: colorized, human-readable console output for local
-      development.
-    - docker / k8s profiles: structured JSON on stdout so log pipelines and
-      `kubectl logs` consumers can parse fields (MDC keys such as requestId
-      appear as top-level JSON fields).
-  The root level is controlled by LOG_LEVEL (default INFO) through
-  application.yml's logging.level.root.
--->
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
