@@ -1,4 +1,3 @@
-# Single-file Kubernetes deployment for countriesinfo.
 # The __DB_HOST__, __DB_USERNAME__, __DB_PASSWORD__ and __IMAGE__ placeholders
 # are rendered by ./k8s-deploy.sh (or replace them manually).
 apiVersion: v1
@@ -13,18 +12,13 @@ metadata:
   namespace: countriesinfo
 data:
   PORT: "8000"
-  # Background sync: immediate first run, then every SYNC_INTERVAL (ms)
   SYNC_INTERVAL: "86400000"
-  # Snapshot cache TTL in seconds
   CACHE_TTL: "300"
-  # Soft-delete vacuum: run interval (ms) and retention before hard delete
   VACUUM_INTERVAL: "3600000"
   VACUUM_RETENTION: "7d"
-  # MySQL location, set per platform by k8s-deploy.sh
   DB_HOST: "__DB_HOST__"
   DB_PORT: "3306"
   DB_NAME: country_store
-  # Connection pool
   DB_MAX_CONNS: "25"
   DB_MIN_CONNS: "5"
   DB_MAX_CONN_TTL: "3600000"
@@ -42,46 +36,65 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: countriesinfo
+  name: __SERVICE_NAME__
   namespace: countriesinfo
   labels:
     app: countriesinfo
+    name: __SERVICE_NAME__
 spec:
   replicas: 1
+  progressDeadlineSeconds: 600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   selector:
     matchLabels:
-      app: countriesinfo
+      name: __SERVICE_NAME__
   template:
     metadata:
       labels:
         app: countriesinfo
+        name: __SERVICE_NAME__
     spec:
+      terminationGracePeriodSeconds: 120
       containers:
-        - name: countriesinfo
+        - name: __SERVICE_NAME__
           image: "__IMAGE__"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: countriesinfo-config
             - secretRef:
                 name: countriesinfo-secret
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 3
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:MaxRAMPercentage=75.0"
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 30
-            periodSeconds: 30
+              scheme: HTTP
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
             timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
@@ -93,12 +106,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: countriesinfo
+  name: __SERVICE_NAME__
   namespace: countriesinfo
 spec:
   type: NodePort
   selector:
-    app: countriesinfo
+    name: __SERVICE_NAME__
   ports:
     - name: http
       port: 8000

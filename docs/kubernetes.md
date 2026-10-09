@@ -23,17 +23,31 @@ local/Compose — see the README [configuration table](../README.md#configuratio
   `VACUUM_RETENTION`, `DB_HOST`, `DB_PORT`, `DB_NAME`, and pool sizes.
 - **Secret** — `DB_USERNAME`, `DB_PASSWORD`.
 
-The manifest uses `__DB_HOST__`, `__DB_USERNAME__`, `__DB_PASSWORD__`, and
-`__IMAGE__` placeholders; the deploy script renders them. Credentials come
-from `DB_USERNAME` / `DB_PASSWORD` environment variables and are never
-committed. For production, prefer Sealed Secrets or External Secrets over
-the raw Secret block.
+The manifest uses `__SERVICE_NAME__`, `__DB_HOST__`, `__DB_USERNAME__`,
+`__DB_PASSWORD__`, and `__IMAGE__` placeholders; the deploy script renders
+them (`SERVICE_NAME` defaults to `countriesinfo`). Credentials come from
+`DB_USERNAME` / `DB_PASSWORD` environment variables and are never
+committed. For production, I will prefer Sealed Secrets or External Secrets.
 
 Inspect what would be applied without touching the cluster:
 
 ```sh
 ./k8s-deploy.sh --render
 ```
+
+### Deployment spec (Java-tuned)
+
+| Field | Value | Why |
+| ----- | ----- | --- |
+| `replicas` | `1` | Start small; scale out with `kubectl scale` |
+| `strategy` | `RollingUpdate`, `maxSurge`/`maxUnavailable` 25% | Zero-downtime updates |
+| `progressDeadlineSeconds` | `600` | A rollout that stalls is marked failed after 10 min |
+| `terminationGracePeriodSeconds` | `120` | Room for Spring Boot's graceful shutdown (`server.shutdown: graceful`, 30 s phase timeout) plus drain time |
+| Liveness probe | `GET /health`, port `8000`, `initialDelay 90s`, `period 10s`, `timeout 1s`, `failureThreshold 3` | A Spring Boot JVM needs 45–90 s to start; the delay prevents the probe from killing it mid-startup |
+| Readiness probe | `GET /ready`, port `8000`, `initialDelay 60s`, `period 10s`, `timeout 3s`, `failureThreshold 3` | `/ready` pings the database, so a pod with a broken DB connection leaves the load balancer |
+| Resources | requests `100m`/`256Mi`, limits `500m`/`512Mi` | JVM startup is CPU-hungry — a 200m cap throttles boot enough to trip the liveness probe; the heap is sized via `JAVA_OPTS=-XX:MaxRAMPercentage=75.0` |
+| `imagePullPolicy` | `IfNotPresent` | Local images are loaded by the deploy script |
+
 
 ## Deploying
 

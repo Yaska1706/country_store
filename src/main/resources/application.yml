@@ -1,7 +1,10 @@
 server:
   port: ${PORT:8000}
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:country_store}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useAffectedRows=true
     username: ${DB_USERNAME:root}
@@ -34,8 +37,6 @@ app:
     interval: ${SYNC_INTERVAL:86400000}
     initial-delay: 0
   vacuum:
-    # Hard-deletes soft-deleted countries (languages cascade) after the
-    # retention period; runs every interval.
     interval: ${VACUUM_INTERVAL:3600000}
     initial-delay: ${VACUUM_INITIAL_DELAY:60000}
     retention: ${VACUUM_RETENTION:7d}
