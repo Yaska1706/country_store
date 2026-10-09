@@ -32,9 +32,6 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>
-            <!-- flyway-community-db-support pulls an enormous dependency tree
-                 (Google Cloud BOMs) that is only needed for non-MySQL
-                 community databases. -->
             <exclusions>
                 <exclusion>
                     <groupId>org.flywaydb</groupId>
@@ -81,6 +78,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -25,6 +25,33 @@ for deleted records.
 - **Container-ready** — Docker image, Docker Compose stack, and a
   single-file Kubernetes deployment.
 
+## Logging
+
+All logs go to **stdout** — containers never write log files.
+
+| Environment | Format |
+| ----------- | ------ |
+| Local (default profile) | Colorized, human-readable console output |
+| Docker (`docker` profile) | Structured JSON, one object per line |
+| Kubernetes (`k8s` profile) | Structured JSON, one object per line |
+
+Every request line carries a correlation id and request attributes
+(`requestId`, `method`, `route`, `ip`), which appear as top-level fields in
+the JSON format via MDC. Liveness/readiness probe hits to `/health`,
+`/ready`, and `/metrics` are not logged while they succeed, so container
+logs stay readable (failures are still logged). The root level is controlled
+by `LOG_LEVEL` (default `INFO`).
+
+Viewing and parsing container logs:
+
+```sh
+docker logs -f countriesinfo
+docker logs countriesinfo | jq 'select(.level == "ERROR")'
+
+kubectl -n countriesinfo logs deployment/countriesinfo -f
+kubectl -n countriesinfo logs deployment/countriesinfo | jq -r 'select(.requestId != null) | [.timestamp, .level, .message] | @tsv'
+```
+
 ## External dependencies
 
 | Dependency | Purpose | Failure behavior |
@@ -217,7 +244,6 @@ pre-builds the Docker image:
   job) so API replicas hold no state and run no duplicate work.
 - **Horizontal autoscaling** — HPA on request rate/latency once the cache
   is shared.
-- **API contracts** — expose OpenAPI/Swagger and generate client SDKs.
 - **Security** — add API keys or OIDC at the ingress, and sign published
   images (e.g. Cosign).
 - **Data layer** — read replicas for MySQL and multi-step Flyway migrations

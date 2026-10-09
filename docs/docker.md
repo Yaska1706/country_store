@@ -26,6 +26,7 @@ docker run -d --name countriesinfo \
   -p 8000:8000 \
   --env-file .env \
   -e DB_HOST=host.docker.internal \
+  -e SPRING_PROFILES_ACTIVE=docker \
   countriesinfo:latest
 ```
 
@@ -38,6 +39,33 @@ docker logs -f countriesinfo
 ```
 
 Stop and remove: `docker rm -f countriesinfo`.
+
+## Logs
+
+With the `docker` profile the container writes **structured JSON to
+stdout**, one object per line, with `requestId`, `method`, `route`, and
+`ip` as fields. Parse and filter with `jq`:
+
+```sh
+docker logs countriesinfo | jq 'select(.level == "ERROR")'
+docker logs -f countriesinfo | jq -r 'select(.requestId != null) | [.timestamp, .level, .requestId, .status] | @tsv'
+```
+
+Probe hits to `/health` and `/ready` are silent while healthy, so the
+output only shows real traffic and failures. Set `LOG_LEVEL` to raise or
+lower verbosity.
+
+### Log rotation
+
+`docker run` stores container logs in the host's json-file driver. Bound
+them so a long-running container cannot fill the disk:
+
+```sh
+docker run ... --log-opt max-size=10m --log-opt max-file=3 ...
+```
+
+The Compose stack below already applies `max-size: 10m` / `max-file: 3` to
+both the app and MySQL.
 
 ## Docker Compose (self-contained stack)
 

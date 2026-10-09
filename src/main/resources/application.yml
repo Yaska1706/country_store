@@ -29,6 +29,10 @@ management:
       exposure:
         include: health,info,prometheus,metrics
 
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+
 app:
   soap:
     base-url: http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso
