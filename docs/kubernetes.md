@@ -19,16 +19,6 @@ liveness probes plus resource requests/limits), and a NodePort service
 The app reads everything from environment variables (the same contract as
 local/Compose — see the README [configuration table](../README.md#configuration)):
 
-- **ConfigMap** — `PORT`, `SYNC_INTERVAL`, `CACHE_TTL`, `VACUUM_INTERVAL`,
-  `VACUUM_RETENTION`, `SPRING_PROFILES_ACTIVE` (`k8s`, JSON logs), `DB_HOST`,
-  `DB_PORT`, `DB_NAME`, and pool sizes.
-- **Secret** — `DB_USERNAME`, `DB_PASSWORD`.
-
-The manifest uses `__SERVICE_NAME__`, `__DB_HOST__`, `__DB_USERNAME__`,
-`__DB_PASSWORD__`, and `__IMAGE__` placeholders; the deploy script renders
-them (`SERVICE_NAME` defaults to `countriesinfo`). Credentials come from
-`DB_USERNAME` / `DB_PASSWORD` environment variables and are never
-committed. For production, I will prefer Sealed Secrets or External Secrets.
 
 Inspect what would be applied without touching the cluster:
 
@@ -36,18 +26,23 @@ Inspect what would be applied without touching the cluster:
 ./k8s-deploy.sh --render
 ```
 
-### Deployment spec (Java-tuned)
+### Deployment spec
+
+The manifest keeps only non-default fields; defaults (rolling update
+strategy, 1 replica, 10 min progress deadline, `scheme: HTTP`,
+`successThreshold: 1`) are inherited from Kubernetes. The one exception is
+`imagePullPolicy: IfNotPresent`, set explicitly because images tagged
+`:latest` would otherwise default to `Always` and try to pull from a
+registry.
 
 | Field | Value | Why |
 | ----- | ----- | --- |
-| `replicas` | `1` | Start small; scale out with `kubectl scale` |
-| `strategy` | `RollingUpdate`, `maxSurge`/`maxUnavailable` 25% | Zero-downtime updates |
-| `progressDeadlineSeconds` | `600` | A rollout that stalls is marked failed after 10 min |
+| `strategy.rollingUpdate` | `maxSurge`/`maxUnavailable` 25% | Zero-downtime updates |
+| `imagePullPolicy` | `IfNotPresent` | Local clusters use the image loaded by the deploy script instead of pulling `:latest` from a registry |
 | `terminationGracePeriodSeconds` | `120` | Room for Spring Boot's graceful shutdown (`server.shutdown: graceful`, 30 s phase timeout) plus drain time |
-| Liveness probe | `GET /health`, port `8000`, `initialDelay 90s`, `period 10s`, `timeout 1s`, `failureThreshold 3` | A Spring Boot JVM needs 45–90 s to start; the delay prevents the probe from killing it mid-startup |
-| Readiness probe | `GET /ready`, port `8000`, `initialDelay 60s`, `period 10s`, `timeout 3s`, `failureThreshold 3` | `/ready` pings the database, so a pod with a broken DB connection leaves the load balancer |
+| Liveness probe | `GET /health`, port `http`, `initialDelay 90s` | A Spring Boot JVM needs 45–90 s to start; the delay prevents the probe from killing it mid-startup |
+| Readiness probe | `GET /ready`, port `http`, `initialDelay 60s`, `timeout 3s` | `/ready` pings the database, so a pod with a broken DB connection leaves the load balancer |
 | Resources | requests `100m`/`256Mi`, limits `500m`/`512Mi` | JVM startup is CPU-hungry — a 200m cap throttles boot enough to trip the liveness probe; the heap is sized via `JAVA_OPTS=-XX:MaxRAMPercentage=75.0` |
-| `imagePullPolicy` | `IfNotPresent` | Local images are loaded by the deploy script |
 
 
 ## Deploying
